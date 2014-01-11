@@ -7,11 +7,16 @@ defmodule Tcprc.Server do
   def start_link(port) do
     # Delegate to gen_server passing in current module
     # ARG will be passed to init
-    :gen_server.start_link({ :local, :tcprc }, __MODULE__, port, ARG, [])
+    :gen_server.start_link({ :local, :tcprc }, __MODULE__, port, [])
   end
 
   def start_link() do
     start_link 1055
+  end
+
+  @doc "Return number of messages responded to"
+  def get_count() do
+    :gen_server.call(:tcprc, :get_count)
   end
 
   @doc "Stops the server"
@@ -28,12 +33,6 @@ defmodule Tcprc.Server do
   @doc "Implement multiple times with a different pattern with sync messages"
   def handle_call(:get_count, _from, state) do
     { :reply, { :ok, state.request_count }, state }
-
-  end
-
-  @doc "Implement multiple times with a different pattern with async messages"
-  def handle_cast(:stop, state) do
-    { :noreply, state }
   end
 
   @doc "Handle the server stop message"
@@ -47,9 +46,9 @@ defmodule Tcprc.Server do
     { :noreply, state.update_request_count(fn(x) -> x + 1 end) }
   end
 
-  @doc "Return number of messages responded to"
-  def get_count() do
-    :gen_server.call(:tcprc, :get_count)
+  def handle_info(:timeout, state = State[lsock: lsock]) do
+    { :ok, _sock } = :gen_tcp.accept lsock
+    { :noreply, state }
   end
 
   def do_rpc(socket, raw_data) do
