@@ -1,16 +1,22 @@
 defmodule Tcprc.Server do
   use GenServer.Behaviour
 
+  defrecord State, port: nil, lsock: nil, request_count: 0
+
   @doc "Starts the server"
-  def start_link() do
+  def start_link(port) do
     # Delegate to gen_server passing in current module
     # ARG will be passed to init
-    :gen_server.start_link({ :local, :NAME }, __MODULE__, ARG, [])
+    :gen_server.start_link({ :local, :tcprc }, __MODULE__, port, ARG, [])
+  end
+
+  def start_link() do
+    start_link 1055
   end
 
   @doc "Stops the server"
   def stop() do
-    :gen_server.cast(:NAME, :stop)
+    :gen_server.cast(:tcprc, :stop)
   end
 
   @doc "Initialize our server"
@@ -33,6 +39,10 @@ defmodule Tcprc.Server do
   @doc "Implement this to handle out of band messages"
   def handle_info(:message, state) do
   end
-  
+
+  @doc "Return number of messages responded to"
+  def get_count() do
+    :gen_server.call(:tcprc, :get_count)
+  end
 
 end
