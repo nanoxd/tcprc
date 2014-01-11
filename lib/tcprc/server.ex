@@ -20,7 +20,9 @@ defmodule Tcprc.Server do
   end
 
   @doc "Initialize our server"
-  def init(ARG) do
+  def init(port) do
+    { :ok, lsock } = :gen_tcp.listen(port, [{ :active, true }])
+    { :ok, State.new(lsock: lsock, port: port), 0 }
   end
 
   @doc "Implement multiple times with a different pattern with sync messages"
@@ -37,7 +39,9 @@ defmodule Tcprc.Server do
   end
 
   @doc "Implement this to handle out of band messages"
-  def handle_info(:message, state) do
+  def handle_info(:timeout, state = State[lsock: lsock]) do
+    { :ok, _sock } = :gen_tcp.accept lsock
+    { :noreply, state }
   end
 
   @doc "Return number of messages responded to"
