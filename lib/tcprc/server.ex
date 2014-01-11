@@ -26,11 +26,14 @@ defmodule Tcprc.Server do
   end
 
   @doc "Implement multiple times with a different pattern with sync messages"
-  def handle_call(:message, from, state) do
+  def handle_call(:get_count, _from, state) do
+    { :reply, { :ok, state.request_count }, state }
+
   end
 
   @doc "Implement multiple times with a different pattern with async messages"
-  def handle_cast(:message, state) do
+  def handle_cast(:stop, state) do
+    { :noreply, state }
   end
 
   @doc "Handle the server stop message"
@@ -39,14 +42,23 @@ defmodule Tcprc.Server do
   end
 
   @doc "Implement this to handle out of band messages"
-  def handle_info(:timeout, state = State[lsock: lsock]) do
-    { :ok, _sock } = :gen_tcp.accept lsock
-    { :noreply, state }
+  def handle_info({ :tcp, socket, raw_data }, state) do
+    do_rpc socket, raw_data
+    { :noreply, state.update_request_count(fn(x) -> x + 1 end) }
   end
 
   @doc "Return number of messages responded to"
   def get_count() do
     :gen_server.call(:tcprc, :get_count)
+  end
+
+  def do_rpc(socket, raw_data) do
+    try do
+      result = Code.eval_string(raw_data)
+      :gen_tcp.send(socket, :io_lib.fwrite("~p~n", [result]))
+    catch
+      error -> :gen_tcp.send(socket, :io_lib.fwrite("~p~n", [error]))
+    end
   end
 
 end
